@@ -2,7 +2,16 @@ import { getPortalData } from '@/lib/db';
 
 export async function GET() {
   try {
-    const payload = await getPortalData();
+    const payload = await getPortalData();import { getPortalData } from '@/lib/db';
+
+export async function GET() {
+  const payload = await getPortalData();
+
+  return Response.json({
+    ok: true,
+    ...payload,
+  });
+}
 
     return Response.json({
       ok: true,
