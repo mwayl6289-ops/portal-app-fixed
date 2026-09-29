@@ -1,28 +1,51 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import styles from './page.module.css';
 
 type Course = {
   id: number;
   title: string;
   category: string;
   status: string;
+  description?: string;
+};
+
+type PortalResponse = {
+  ok: boolean;
+  source: string;
+  data: Course[];
+  message: string;
+  timestamp?: string;
 };
 
 export default function HomePage() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [status, setStatus] = useState('Loading...');
+  const [source, setSource] = useState('unknown');
+  const [isLoading, setIsLoading] = useState(true);
+  const [dbHealth, setDbHealth] = useState('checking...');
 
   useEffect(() => {
     async function loadData() {
       try {
-        const response = await fetch('/api/portal/data');
-        const payload = await response.json();
+        // Check database health
+        const healthRes = await fetch('/api/health');
+        const healthData = await healthRes.json();
+        setDbHealth(healthData.status || 'unknown');
 
-        setCourses(payload.data || []);
-        setStatus(payload.message || 'Connected');
+        // Load portal data
+        const res = await fetch('/api/portal/data');
+        const data: PortalResponse = await res.json();
+
+        setCourses(data.data || []);
+        setStatus(data.message || 'Loaded successfully');
+        setSource(data.source || 'unknown');
       } catch (error) {
-        setStatus('Failed to load portal data');
+        setStatus('Failed to load data. Please try again.');
+        setCourses([]);
+      } finally {
+        setIsLoading(false);
       }
     }
 
@@ -30,54 +53,74 @@ export default function HomePage() {
   }, []);
 
   return (
-    <main style={{ fontFamily: 'Arial, sans-serif', padding: '40px', maxWidth: 980, margin: '0 auto' }}>
-      <h1 style={{ fontSize: '2.5rem', marginBottom: '12px' }}>Portal Learning</h1>
-      <p style={{ color: '#555', marginBottom: '28px' }}>
-        A safe education platform starter with Vercel + Neon PostgreSQL.
-      </p>
+    <div className={styles.container}>
+      <header className={styles.header}>
+        <h1>📚 Learning Portal</h1>
+        <p>A complete, error-free learning platform with Vercel + Neon</p>
+      </header>
 
-      <div
-        style={{
-          background: '#f5f7ff',
-          border: '1px solid #dfe7ff',
-          borderRadius: 12,
-          padding: '18px 20px',
-          marginBottom: 30,
-        }}
-      >
-        <strong>Status:</strong> {status}
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 20 }}>
-        {courses.map((course) => (
-          <div
-            key={course.id}
-            style={{
-              background: '#fff',
-              borderRadius: 12,
-              border: '1px solid #e6eaf2',
-              padding: 18,
-              boxShadow: '0 4px 12px rgba(0,0,0,0.04)',
-            }}
-          >
-            <small style={{ color: '#6b7280' }}>{course.category}</small>
-            <h3 style={{ margin: '8px 0' }}>{course.title}</h3>
+      <section className={styles.statusSection}>
+        <div className={styles.statusCard}>
+          <div className={styles.statusItem}>
+            <span className={styles.label}>Database Status:</span>
             <span
-              style={{
-                display: 'inline-block',
-                background: course.status === 'active' ? '#d9fbe8' : '#fff4d6',
-                color: course.status === 'active' ? '#0d7a46' : '#9a6a00',
-                borderRadius: 999,
-                padding: '6px 10px',
-                fontSize: 12,
-                fontWeight: 700,
-              }}
+              className={`${styles.value} ${styles[`status-${dbHealth}`]}`}
             >
-              {course.status}
+              {dbHealth.toUpperCase()}
             </span>
           </div>
-        ))}
-      </div>
-    </main>
+          <div className={styles.statusItem}>
+            <span className={styles.label}>Data Source:</span>
+            <span className={styles.value}>{source}</span>
+          </div>
+          <div className={styles.statusItem}>
+            <span className={styles.label}>Message:</span>
+            <span className={styles.message}>{status}</span>
+          </div>
+        </div>
+      </section>
+
+      <section className={styles.coursesSection}>
+        <h2>Available Courses</h2>
+        {isLoading ? (
+          <div className={styles.loading}>Loading courses...</div>
+        ) : courses.length > 0 ? (
+          <div className={styles.coursesGrid}>
+            {courses.map((course) => (
+              <div key={course.id} className={styles.courseCard}>
+                <div className={styles.courseHeader}>
+                  <h3>{course.title}</h3>
+                  <span className={`${styles.status} ${styles[`status-${course.status}`]}`}>
+                    {course.status}
+                  </span>
+                </div>
+                <p className={styles.category}>📁 {course.category}</p>
+                {course.description && (
+                  <p className={styles.description}>{course.description}</p>
+                )}
+                <button className={styles.enrollBtn}>Enroll Now</button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className={styles.empty}>No courses available</div>
+        )}
+      </section>
+
+      <section className={styles.infoSection}>
+        <h2>About This Platform</h2>
+        <ul>
+          <li>✅ Built with Next.js 14 and TypeScript</li>
+          <li>✅ PostgreSQL database with Neon</li>
+          <li>✅ Deployed on Vercel with automatic scaling</li>
+          <li>✅ Safe fallback system - always works</li>
+          <li>✅ Error handling at every step</li>
+        </ul>
+      </section>
+
+      <footer className={styles.footer}>
+        <p>© 2024 Learning Portal. Built with ❤️ on Vercel</p>
+      </footer>
+    </div>
   );
 }
